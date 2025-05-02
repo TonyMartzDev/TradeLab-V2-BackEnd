@@ -28,15 +28,17 @@ function initDB() {
         }
       };
     // Create users table
-    db.run(`
+    db.run(
+      `
         CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           username TEXT NOT NULL,
           password_hash TEXT NOT NULL,
           email TEXT NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
         );
-      ` ,
+      `,
       (err) => {
         if (err) {
           console.error("Error creating users table:", err.message);
@@ -44,9 +46,22 @@ function initDB() {
         } else {
           console.log("Users table created");
         }
-      });
-    db.run(`
-        CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+      }
+    );
+    db.run(
+      `
+        CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);`,
+      (err) => {
+        if (err) {
+          console.error("Error creating users indexes:", err.message);
+          throw err;
+        } else {
+          console.log("Users indexes created");
+        }
+      }
+    );
+    db.run(
+      `
         CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
       `,
       (err) => {
@@ -56,17 +71,18 @@ function initDB() {
         } else {
           console.log("Users indexes created");
         }
-      });
+      }
+    );
 
     // Create user_settings table
-    db.run(`
+    db.run(
+      `
         CREATE TABLE IF NOT EXISTS user_settings (
           user_id INTEGER PRIMARY KEY NOT NULL,
-          setting_name TEXT NOT NULL,
-          setting_value TEXT NOT NULL,
           default_currency TEXT NOT NULL DEFAULT 'USD',
           theme TEXT NOT NULL DEFAULT 'light',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+          updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         );
       `,
@@ -77,17 +93,20 @@ function initDB() {
         } else {
           console.log("User_settings table created");
         }
-      });
+      }
+    );
     // Index on user_id is implicitly created by PRIMARY KEY
 
     //Create sub_accounts table
-    db.run(`
+    db.run(
+      `
         CREATE TABLE IF NOT EXISTS sub_accounts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
           name TEXT NOT NULL,
           description TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+          updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
           UNIQUE (user_id, name),
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         );
@@ -99,8 +118,10 @@ function initDB() {
         } else {
           console.log("Sub_accounts table created");
         }
-      });
-    db.run(`
+      }
+    );
+    db.run(
+      `
         CREATE INDEX IF NOT EXISTS idx_sub_accounts_user_id ON sub_accounts (user_id);
       `,
       (err) => {
@@ -110,14 +131,16 @@ function initDB() {
         } else {
           console.log("Sub_accounts indexes created");
         }
-      });
+      }
+    );
 
     //Create trades table
-    db.run(`
+    db.run(
+      `
         CREATE TABLE IF NOT EXISTS trades (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id INTEGER NOT NULL,
-          sub_account_id INTEGER NOT NULL,
+          sub_account_id INTEGER,
           ticker TEXT NOT NULL,
           quantity REAL NOT NULL CHECK (quantity > 0),
           entry_price REAL NOT NULL,
@@ -128,9 +151,10 @@ function initDB() {
           exit_date TEXT,
           notes TEXT,
           commission REAL DEFAULT 0.0,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+          updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-          FOREIGN KEY (sub_account_id) REFERENCES sub_accounts (id) ON DELETE SET NULL
+          FOREIGN KEY (sub_account_id) REFERENCES sub_accounts(id) ON DELETE SET NULL
         );
       `,
       (err) => {
@@ -140,50 +164,64 @@ function initDB() {
         } else {
           console.log("Trades table created");
         }
-      });
+      }
+    );
 
     // Add indexes for trades table
     db.run(
-      `CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades (user_id);`,
+      `
+        CREATE INDEX IF NOT EXISTS idx_trades_user_id ON trades (user_id);
+      `,
       (err) => {
         if (err) {
           console.error("Error creating trades indexes:", err.message);
           throw err;
         }
-      });
+      }
+    );
 
     db.run(
-      `CREATE INDEX IF NOT EXISTS idx_trades_sub_account_id ON trades (sub_account_id);`,
+      `
+        CREATE INDEX IF NOT EXISTS idx_trades_sub_account_id ON trades (sub_account_id);`,
       (err) => {
         if (err) {
           console.error("Error creating trades indexes:", err.message);
           throw err;
         }
-      });
-
-    db.run(`CREATE INDEX IF NOT EXISTS idx_trades_ticker ON trades (ticker);`,
-      (err) => {
-        if (err) {
-          console.error("Error creating trades indexes:", err.message);
-          throw err;
-        }
-      });
+      }
+    );
 
     db.run(
-      `CREATE INDEX IF NOT EXISTS idx_trades_entry_date ON trades (entry_date);`,
+      `
+        CREATE INDEX IF NOT EXISTS idx_trades_ticker ON trades (ticker);`,
       (err) => {
         if (err) {
           console.error("Error creating trades indexes:", err.message);
           throw err;
         }
-      });
-    db.run(`CREATE INDEX IF NOT EXISTS idx_trades_status ON trades (status);`,
+      }
+    );
+
+    db.run(
+      `
+        CREATE INDEX IF NOT EXISTS idx_trades_entry_date ON trades (entry_date);`,
       (err) => {
         if (err) {
           console.error("Error creating trades indexes:", err.message);
           throw err;
         }
-      });
+      }
+    );
+    db.run(
+      `
+        CREATE INDEX IF NOT EXISTS idx_trades_status ON trades (status);`,
+      (err) => {
+        if (err) {
+          console.error("Error creating trades indexes:", err.message);
+          throw err;
+        }
+      }
+    );
 
     console.log("Database schema initialization attempt completed");
   });

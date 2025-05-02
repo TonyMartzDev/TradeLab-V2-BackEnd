@@ -16,7 +16,7 @@
     "sqlite",
     "express"
   ],
-  "author": "",
+  "author": "Tony Martz",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
