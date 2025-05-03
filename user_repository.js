@@ -1,6 +1,27 @@
-import db from "./src/db/database.js";
-import { connectToDatabase } from "./src/db/database_test_env.js";
-import dbModule from "./src/db/database.js";
+// Import the database connection based on environment
+import process from "process";
+
+// Dynamically import the appropriate database connection based on environment
+let db;
+if (process.env.NODE_ENV === "test") {
+  // For test environment, we'll use the database connection passed to the test
+  // The actual db instance will be set during test setup
+  db = null;
+} else {
+  // For non-test environments, import the regular database
+  // Using a dynamic import would be better, but for simplicity we'll use a require-like approach
+  const dbModule = await import("./src/db/database.js");
+  db = dbModule.default;
+}
+
+/**
+ * Sets the database connection to use for all repository functions.
+ * This is primarily used for testing to inject a test database.
+ * @param {Object} database - The database connection to use
+ */
+function setDatabaseConnection(database) {
+  db = database;
+}
 
 /**
  * Creates a new user in the database.
@@ -75,6 +96,30 @@ function findUserByEmail(email) {
     db.get(sql, params, (err, row) => {
       if (err) {
         console.error("Error finding user by email:", err.message);
+        reject(err);
+      } else {
+        resolve(row || null);
+      }
+    });
+  });
+}
+
+/**
+ * Finds a user by their username.
+ * @param {string} username
+ * @returns {Promise<object|null>} A promise that resolves with the user object if found, or null otherwise.
+ * @throws {Error} Throws an error if the database query fails.
+ */
+function findUserByUsername(username) {
+  return new Promise((resolve, reject) => {
+    const sql = `
+    SELECT * FROM users WHERE username = ?`;
+    const params = [username];
+
+    // Use db.get as username should be unique
+    db.get(sql, params, (err, row) => {
+      if (err) {
+        console.error("Error finding user by username:", err.message);
         reject(err);
       } else {
         resolve(row || null);
@@ -176,7 +221,6 @@ function createUserWithSettings(username, email, passwordHash, defaultSettings) 
  * @returns {Promise<object|null>} Settings object or null if not found.
  */
 async function findSettingsByUserId(userId) {
-  const db = await dbModule();
   return new Promise((resolve, reject) => {
     const sql = `
         SELECT * FROM user_settings WHERE user_id = ?`;
@@ -195,6 +239,8 @@ export {
   createUser, 
   findUserById, 
   findUserByEmail, 
+  findUserByUsername,
   createUserWithSettings,
   findSettingsByUserId,
+  setDatabaseConnection, // Export the function to set the database connection
 };
