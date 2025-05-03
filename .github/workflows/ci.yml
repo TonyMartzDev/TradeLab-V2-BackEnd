@@ -1,0 +1,76 @@
+# .github/workflows/ci.yml
+
+name: jsdom CI # Name of the workflow
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: [ main, develop ] # Or your primary branches
+  pull_request:
+    branches: [ main, develop ] # Or your primary branches
+
+jobs:
+  build: # The ID of the job
+    name: Build and Test # Name displayed on GitHub
+    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x] # Test on relevant Node.js versions
+        # Add other matrix strategies if needed (e.g., different OS)
+
+    # --- Optional: Add PostgreSQL Service if needed for integration tests ---
+    # services:
+    #   postgres:
+    #     image: postgres:15 # Use the version matching your production target
+    #     env:
+    #       POSTGRES_USER: testuser
+    #       POSTGRES_PASSWORD: testpassword
+    #       POSTGRES_DB: testdb
+    #     ports:
+    #       - 5432:5432 # Map port from service container to runner host
+    #     # Optional: health check to wait until postgres is ready
+    #     options: >-
+    #       --health-cmd pg_isready
+    #       --health-interval 10s
+    #       --health-timeout 5s
+    #       --health-retries 5
+    # -----------------------------------------------------------------------
+
+    steps:
+      # 1. Get the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v4 # Use the latest version
+
+      # 2. Set up the specified Node.js version
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm' # Enable caching for npm dependencies
+
+      # 3. Install dependencies securely and quickly using package-lock.json
+      - name: Install dependencies
+        run: npm ci # 'ci' is generally preferred over 'install' in CI
+
+      # 4. Run Linters (Optional but Recommended - Add if you have ESLint configured)
+      # - name: Run linters
+      #   run: npm run lint # Assumes you have an "lint" script in package.json
+
+      # 5. Run tests
+      # - name: Run tests
+      #   run: npm test # Executes "jest" defined in your package.json scripts
+        # --- Optional: Pass DB credentials if using PostgreSQL service ---
+        # env:
+        #   PGHOST: localhost # Service containers are accessible via localhost on the runner
+        #   PGPORT: 5432 # The port mapped in the service definition
+        #   PGUSER: testuser
+        #   PGPASSWORD: testpassword
+        #   PGDATABASE: testdb
+        #   DATABASE_URL: postgresql://testuser:testpassword@localhost:5432/testdb
+        #   NODE_ENV: test # Set environment to 'test'
+        # -----------------------------------------------------------------
+
+      # 6. Build Step (Optional - Add if you have a frontend build process)
+      # - name: Build application
+      #   run: npm run build # Assumes you have a "build" script
