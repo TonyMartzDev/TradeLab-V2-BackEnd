@@ -1,4 +1,6 @@
 import db from "./src/db/database.js";
+import { connectToDatabase } from "./src/db/database_test_env.js";
+import dbModule from "./src/db/database.js";
 
 /**
  * Creates a new user in the database.
@@ -168,4 +170,31 @@ function createUserWithSettings(username, email, passwordHash, defaultSettings) 
   });
 }
 
-export { createUser, findUserById, findUserByEmail, createUserWithSettings };
+/**
+ * Finds user settings by user ID.
+ * @param {number} userId
+ * @returns {Promise<object|null>} Settings object or null if not found.
+ */
+async function findSettingsByUserId(userId) {
+  const db = await dbModule();
+  return new Promise((resolve, reject) => {
+    const sql = `
+        SELECT * FROM user_settings WHERE user_id = ?`;
+    db.get(sql, [userId], (err, row) => {
+      if (err) {
+        console.error("Error finding user settings by user ID:", err.message);
+        reject(err);
+      } else {
+        resolve(row || null);
+      }
+    });
+  });
+}
+
+export { 
+  createUser, 
+  findUserById, 
+  findUserByEmail, 
+  createUserWithSettings,
+  findSettingsByUserId,
+};
