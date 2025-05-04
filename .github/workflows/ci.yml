@@ -58,8 +58,8 @@ jobs:
       #   run: npm run lint # Assumes you have an "lint" script in package.json
 
       # 5. Run tests
-      # - name: Run tests
-      #   run: npm test # Executes "jest" defined in your package.json scripts
+      - name: Run tests
+        run: npm test # Executes "jest" defined in your package.json scripts
         # --- Optional: Pass DB credentials if using PostgreSQL service ---
         # env:
         #   PGHOST: localhost # Service containers are accessible via localhost on the runner
