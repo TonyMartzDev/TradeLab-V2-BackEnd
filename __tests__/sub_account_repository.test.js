@@ -2,7 +2,6 @@
 import {
   createSubAccount,
   findSubAccountById,
-  findSubAccountByUserId,
   updateSubAccount,
   deleteSubAccount,
   findSubAccountsByUserId,
@@ -17,11 +16,9 @@ import connectToDatabase, {
   closeDb,
   DATABASE_PATH as TEST_DB_PATH,
 } from "../src/db/database_test_env";
-import process from "process";
 
 // Import Node.js file system module for cleanup
 import fs from "fs/promises";
-import path from "path";
 
 // Import jests testing functions
 import {
@@ -29,7 +26,6 @@ import {
   beforeAll,
   afterAll,
   beforeEach,
-  it,
   expect,
   test,
 } from "@jest/globals";
@@ -142,7 +138,7 @@ describe("SubAccountRepository Integration Tests", () => {
     
     // Expect the second attempt with the same name for the same user to fail
     await expect(
-      createSubAccount(testUserId, duplicateName)
+      createSubAccount(testUserId, duplicateName),
     ).rejects.toThrow(
       /SQLITE_CONSTRAINT: UNIQUE constraint failed: sub_account.user_id, sub_account.name/i
     );
