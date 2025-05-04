@@ -1,14 +1,20 @@
-// Import functions to test
-import {
+// Import functions to test and the sub_account_repository module
+import * as subAccountRepository from "../sub_account_repository.js";
+
+// Destructure the functions we need for testing
+const {
   createSubAccount,
   findSubAccountById,
   updateSubAccount,
   deleteSubAccount,
   findSubAccountsByUserId,
-} from "../sub_account_repository.js";
+} = subAccountRepository;
 
-// Import user repository functions needed for setup
-import { createUser } from "../user_repository.js";
+// Import user repository module needed for setup
+import * as userRepository from "../user_repository.js";
+
+// Destructure the functions we need for testing
+const { createUser } = userRepository;
 
 //Import DB control functions (from test DB setup file)
 import connectToDatabase, {
@@ -41,13 +47,29 @@ describe("SubAccountRepository Integration Tests", () => {
   beforeAll(async () => {
     // --- Same setup as user_repository.test.js ---
     try {
+      console.log(`Attempting to delete old test DB: ${TEST_DB_PATH}`);
       await fs.unlink(TEST_DB_PATH);
+      console.log("Old test DB deleted successfully.");
     } catch (err) {
-      if (err.code !== "ENOENT") throw err;
+      if (err.code !== "ENOENT") { // Ignore 'file not found' error
+        console.error("Error deleting old test DB:", err);
+        throw err; // Rethrow other errors
+      }
+      console.log("No old test DB found to delete.");
     }
+    
+    // Connect to the TEST database and initialize schema
     db = await connectToDatabase();
+    console.log("Test DB connected successfully. Initializing schema...");
     await initDB();
-    // --- End Setup ---
+    console.log("Test DB schema initialized successfully.");
+    
+    // Add a small delay to ensure all database operations are complete
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    
+    // Inject the test database connection into both repository modules
+    userRepository.setDatabaseConnection(db);
+    subAccountRepository.setDatabaseConnection(db);
     
     // Create user for these tests
     testUserId = await createUser(
@@ -114,7 +136,7 @@ describe("SubAccountRepository Integration Tests", () => {
     
     const userSubAccounts = await findSubAccountsByUserId(testUserId);
 
-    expect(userSubAccounts).toBeInstanceOf(Array);
+    expect(Array.isArray(userSubAccounts)).toBe(true);
     expect(userSubAccounts).toHaveLength(3);
     // Check if sorted by name ASC (as defined in repository function);
     expect(userSubAccounts[0].name).toBe("Account A");
@@ -140,7 +162,7 @@ describe("SubAccountRepository Integration Tests", () => {
     await expect(
       createSubAccount(testUserId, duplicateName),
     ).rejects.toThrow(
-      /SQLITE_CONSTRAINT: UNIQUE constraint failed: sub_account.user_id, sub_account.name/i
+      /SQLITE_CONSTRAINT: UNIQUE constraint failed: sub_accounts.user_id, sub_accounts.name/i
     );
   });
 
@@ -160,6 +182,9 @@ describe("SubAccountRepository Integration Tests", () => {
   test("should update an existing sub-account", async () => {
     const originalName = "Original Name";
     const subAccountId = await createSubAccount(testUserId, originalName);
+    
+    // Add a small delay to ensure the timestamps will be different
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     const updatedName = "Updated Name";
     const updatedDesc = "Updated Desc";

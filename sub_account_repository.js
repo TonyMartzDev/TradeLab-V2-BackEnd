@@ -1,4 +1,27 @@
-import db from "/src/db/database.js";
+// Import the database connection based on environment
+import process from "process";
+
+// Dynamically import the appropriate database connection based on environment
+let db;
+if (process.env.NODE_ENV === "test") {
+  // For test environment, we'll use the database connection passed to the test
+  // The actual db instance will be set during test setup
+  db = null;
+} else {
+  // For non-test environments, import the regular database
+  // Using a dynamic import would be better, but for simplicity we'll use a require-like approach
+  const dbModule = await import("./src/db/database_test_env.js");
+  db = dbModule.default;
+}
+
+/**
+ * Sets the database connection to use for all repository functions.
+ * This is primarily used for testing to inject a test database.
+ * @param {Object} database - The database connection to use
+ */
+function setDatabaseConnection(database) {
+  db = database;
+}
 
 /**
  * Creates a new sub-account for a given user.
@@ -86,18 +109,19 @@ function findSubAccountById(id) {
  * @param {number} id - The ID of the sub-account to update.
  * @param {string} name - The new name for the sub-account.
  * @param {string} description - The new description for the sub-account.
+ * @param {string} broker - The new broker for the sub-account.
  * @returns {Promise<boolean>} A promise that resolves with true if the update was successful (row updated), or false otherwise.
  * @throws {Error} Throws an error if the update fails.
  */
-function updateSubAccount(id, name, description = null) {
+function updateSubAccount(id, name, description = null, broker = null) {
   return new Promise((resolve, reject) => {
     const now = new Date().toISOString();
     const sql = `
       UPDATE sub_accounts
-      SET name = ?, description = ?, updated_at = ?
+      SET name = ?, description = ?, broker = ?, updated_at = ?
       WHERE id = ?
     `;
-    const params = [name, description, now, id];
+    const params = [name, description, broker, now, id];
     db.run(sql, params, function (err) {
       if (err) {
         console.error("Error updating sub-account:", err.message);
@@ -145,5 +169,6 @@ export {
   findSubAccountById, 
   updateSubAccount, 
   deleteSubAccount,
+  setDatabaseConnection, // Export the function to set the database connection
 };
 

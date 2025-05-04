@@ -96,7 +96,7 @@ describe("UserRepository Integration Tests", () => {
           (err) => {
             if (err) reject(err);
             else resolve();
-          }
+          },
         );
         //If no cascade, delete explicitly in reverse order of creation
         db.run(
@@ -106,7 +106,7 @@ describe("UserRepository Integration Tests", () => {
           (err) => {
             if (err) reject(err);
             else resolve();
-          }
+          },
         );
         db.run(
           `
@@ -115,7 +115,7 @@ describe("UserRepository Integration Tests", () => {
           (err) => {
             if (err) reject(err);
             else resolve();
-          }
+          },
         );
         db.run(
           `
@@ -124,7 +124,7 @@ describe("UserRepository Integration Tests", () => {
           (err) => {
             if (err) reject(err);
             else resolve();
-          }
+          },
         );
         db.run(
           `
@@ -133,7 +133,7 @@ describe("UserRepository Integration Tests", () => {
           (err) => {
             if (err) reject(err);
             else resolve();
-          }
+          },
         );
       });
     });
@@ -152,7 +152,7 @@ describe("UserRepository Integration Tests", () => {
     const userId = await createUser(
       userData.username,
       userData.email,
-      passwordHash
+      passwordHash,
     );
 
     expect(userId).toEqual(expect.any(Number)); // Should return a numeric ID
@@ -177,7 +177,7 @@ describe("UserRepository Integration Tests", () => {
     const userId = await createUser(
       userData.username,
       userData.email,
-      passwordHash
+      passwordHash,
     );
 
     const foundUser = await findUserByEmail(userData.email);
@@ -205,15 +205,15 @@ describe("UserRepository Integration Tests", () => {
     await createUser(
       userData.username,
       userData.email,
-      simpleHash(userData.password)
+      simpleHash(userData.password),
     );
 
     // Expect the second attempt with the same email to fail (reject the promise)
     // Note: The exact error message might vary based on SQLite version/constraints
     await expect(
-      createUser("anotheruser", userData.email, simpleHash("otherpass"))
+      createUser("anotheruser", userData.email, simpleHash("otherpass")),
     ).rejects.toThrow(
-      /SQLITE_CONSTRAINT: UNIQUE constraint failed: users.email/i
+      /SQLITE_CONSTRAINT: UNIQUE constraint failed: users.email/i,
     );
   });
 
@@ -226,17 +226,17 @@ describe("UserRepository Integration Tests", () => {
     await createUser(
       userData.username,
       userData.email,
-      simpleHash(userData.password)
+      simpleHash(userData.password),
     );
 
     await expect(
       createUser(
         userData.username,
         "user5@example.com",
-        simpleHash("otherpass")
+        simpleHash("otherpass"),
       )
     ).rejects.toThrow(
-      /SQLITE_CONSTRAINT: UNIQUE constraint failed: users.username/i
+      /SQLITE_CONSTRAINT: UNIQUE constraint failed: users.username/i,
     );
   });
 
@@ -253,7 +253,7 @@ describe("UserRepository Integration Tests", () => {
       userData.username,
       userData.email,
       passwordHash,
-      settings
+      settings,
     );
 
     expect(userId).toEqual(expect.any(Number));
@@ -286,7 +286,7 @@ describe("UserRepository Integration Tests", () => {
     await createUser(
       "existingUser",
       "fail_email@example.com",
-      simpleHash("pass")
+      simpleHash("pass"),
     );
 
     // Now attempt the transaction with the duplicate email
@@ -296,7 +296,7 @@ describe("UserRepository Integration Tests", () => {
         "newUser",
         "fail_email@example.com",
         simpleHash("newPass"),
-        settings
+        settings,
       )
     ).rejects.toThrow(/SQLITE_CONSTRAINT/); // It should fail
 
