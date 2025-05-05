@@ -1,4 +1,27 @@
-import db from "./src/db/database.js";
+// Import the database connection based on environment
+import process from "process";
+
+// Dynamically import the appropriate database connection based on environment
+let db;
+if (process.env.NODE_ENV === "test") {
+  // For test environment, we'll use the database connection passed to the test
+  // The actual db instance will be set during test setup
+  db = null;
+} else {
+  // For non-test environments, import the regular database
+  // Using a dynamic import would be better, but for simplicity we'll use a require-like approach
+  const dbModule = await import("./src/db/database_test_env.js");
+  db = dbModule.default;
+}
+
+/**
+ * Sets the database connection to use for all repository functions.
+ * This is primarily used for testing to inject a test database.
+ * @param {Object} database - The database connection to use
+ */
+function setDatabaseConnection(database) {
+  db = database;
+}
 
 /**
  * Creates a new trade record (defaults to 'open' status)
@@ -164,23 +187,44 @@ function findClosedTradesByUserId(userId, limit = 50, offset = 0) {
  */
 function findTradesBySubAccountId(subAccountId, limit = 50, offset = 0) {
   return new Promise((resolve, reject) => {
-    const sql = `
-      SELECT * FROM trades 
-      WHERE sub_account_id = ? 
-      ORDER BY exit_date DESC,
-      entry_date DESC
-      LIMIT ? OFFSET ?
+    // Get the user_id associated with this sub-account first
+    const findSubAccountSql = `
+      SELECT user_id FROM sub_accounts WHERE id = ?
     `;
-    const params = [subAccountId, limit, offset];
-
-    // Use db.all as we expect multiple rows
-    db.all(sql, params, (err, rows) => {
+    
+    db.get(findSubAccountSql, [subAccountId], (err, subAccount) => {
       if (err) {
-        console.error("Error finding trades by sub-account ID:", err.message);
+        console.error("Error finding sub-account:", err.message);
         reject(err);
-      } else {
-        resolve(rows || []);
+        return;
       }
+      
+      if (!subAccount) {
+        // Sub-account not found, return empty array
+        resolve([]);
+        return;
+      }
+      
+      const userId = subAccount.user_id;
+      
+      const sql = `
+        SELECT * FROM trades 
+        WHERE sub_account_id = ? AND user_id = ?
+        ORDER BY exit_date DESC,
+        entry_date DESC
+        LIMIT ? OFFSET ?
+      `;
+      const params = [subAccountId, userId, limit, offset];
+
+      // Use db.all as we expect multiple rows
+      db.all(sql, params, (err, rows) => {
+        if (err) {
+          console.error("Error finding trades by sub-account ID:", err.message);
+          reject(err);
+        } else {
+          resolve(rows || []);
+        }
+      });
     });
   });
 }
@@ -252,6 +296,10 @@ function updateTradeDetails(id, {notes=undefined, commission=undefined}) {
     const fieldsToUpdate = [];
     const params = [];
 
+    // Add updated_at first to ensure it's always included
+    fieldsToUpdate.push("updated_at = ?");
+    params.push(now);
+    
     if (notes !== undefined) {
       fieldsToUpdate.push("notes = ?");
       params.push(notes);
@@ -260,9 +308,9 @@ function updateTradeDetails(id, {notes=undefined, commission=undefined}) {
       fieldsToUpdate.push("commission = ?");
       params.push(commission);
     }
+    
+    // Add the ID parameter last
     params.push(id);
-    fieldsToUpdate.push("updated_at = ?");
-    params.push(now);
     const sql = `
       UPDATE trades
       SET ${fieldsToUpdate.join(", ")}
@@ -315,4 +363,6 @@ export {
   closeTrade,
   updateTradeDetails,
   deleteTrade,
+  findTradeById,
+  setDatabaseConnection,
 };
